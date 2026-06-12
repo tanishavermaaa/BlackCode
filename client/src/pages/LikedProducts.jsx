@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import apiClient from '../utils/apiClient';
 import { Heart, HeartOff, ShoppingBag, Loader, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -12,7 +12,7 @@ const LikedProducts = () => {
   const fetchLikedProducts = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('/api/products/liked');
+      const res = await apiClient.get('/api/products/liked');
       setLikedProducts(res.data);
     } catch (err) {
       setError('Failed to load liked products');
@@ -28,7 +28,7 @@ const LikedProducts = () => {
 
   const handleUnlike = async (productId) => {
     try {
-      await axios.post(`/api/products/${productId}/like`);
+      await apiClient.post(`/api/products/${productId}/like`);
       // Immediately filter out from the liked products list view
       setLikedProducts(likedProducts.filter(p => p._id !== productId));
     } catch (err) {

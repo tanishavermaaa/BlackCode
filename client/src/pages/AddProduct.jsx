@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import apiClient from '../utils/apiClient';
 import { Tag, DollarSign, Image, FileText, AlertCircle, PlusCircle } from 'lucide-react';
 
 const AddProduct = () => {
@@ -41,7 +41,7 @@ const AddProduct = () => {
 
     setLoading(true);
     try {
-      await axios.post('/api/products', {
+      await apiClient.post('/api/products', {
         name,
         price: parsedPrice,
         imageUrl,

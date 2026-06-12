@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import apiClient from '../utils/apiClient';
 
 export const AuthContext = createContext();
 
@@ -8,21 +8,11 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(true);
 
-  // Set default authorization header if token exists
-  if (token) {
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-  } else {
-    delete axios.defaults.headers.common['Authorization'];
-  }
-
-  // Base API configuration (points to local express backend on port 5000)
-  axios.defaults.baseURL = 'http://localhost:5000';
-
   useEffect(() => {
     const fetchUser = async () => {
       if (token) {
         try {
-          const res = await axios.get('/api/auth/profile');
+          const res = await apiClient.get('/api/auth/profile');
           setUser(res.data);
         } catch (err) {
           console.error('Session expired or error loading profile:', err);
@@ -39,14 +29,17 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('token', jwtToken);
     setToken(jwtToken);
     setUser(userData);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${jwtToken}`;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await apiClient.post('/api/auth/logout');
+    } catch (err) {
+      console.error('Logout request failed', err);
+    }
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
-    delete axios.defaults.headers.common['Authorization'];
   };
 
   return (

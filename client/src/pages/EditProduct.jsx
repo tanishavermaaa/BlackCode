@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import axios from 'axios';
+import apiClient from '../utils/apiClient';
 import { Tag, DollarSign, Image, FileText, AlertCircle, Save } from 'lucide-react';
 
 const EditProduct = () => {
@@ -26,8 +26,8 @@ const EditProduct = () => {
       // Fallback: Fetch all products and filter (since we don't have single product GET endpoint)
       const fetchProduct = async () => {
         try {
-          const res = await axios.get('/api/products');
-          const found = res.data.find(p => p._id === id);
+          const res = await apiClient.get('/api/products');
+          const found = res.data.products.find(p => p._id === id);
           if (found) {
             setFormData({
               name: found.name,
@@ -72,7 +72,7 @@ const EditProduct = () => {
 
     setLoading(true);
     try {
-      await axios.put(`/api/products/${id}`, {
+      await apiClient.put(`/api/products/${id}`, {
         name,
         price: parsedPrice,
         imageUrl,

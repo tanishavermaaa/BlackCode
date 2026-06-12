@@ -3,6 +3,7 @@ const router = express.Router();
 const Product = require('../models/Product');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const AppError = require('../src/utils/AppError');
 
 // Helper to validate price
 const validatePrice = (price) => {
@@ -11,22 +12,40 @@ const validatePrice = (price) => {
 };
 
 // @route   GET api/products
-// @desc    Get all products
+// @desc    Get all products (paginated)
 // @access  Private
-router.get('/', auth, async (req, res) => {
+router.get('/', auth, async (req, res, next) => {
   try {
-    const products = await Product.find().populate('owner', 'name email').sort({ createdAt: -1 });
-    res.json(products);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, parseInt(req.query.limit) || 12); // Default to 12, cap at 50
+
+    const [products, total] = await Promise.all([
+      Product.find()
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .populate('owner', 'name email')
+        .sort({ createdAt: -1 }),
+      Product.countDocuments()
+    ]);
+
+    res.json({
+      products,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error fetching products');
+    next(err);
   }
 });
 
 // @route   GET api/products/liked
 // @desc    Get all liked products for current user
 // @access  Private
-router.get('/liked', auth, async (req, res) => {
+router.get('/liked', auth, async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id).populate({
       path: 'likedProducts',
@@ -34,33 +53,31 @@ router.get('/liked', auth, async (req, res) => {
     });
     
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return next(new AppError('User not found', 404));
     }
     
     res.json(user.likedProducts);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error fetching liked products');
+    next(err);
   }
 });
 
 // @route   POST api/products
 // @desc    Create a product
 // @access  Private
-router.post('/', auth, async (req, res) => {
+router.post('/', auth, async (req, res, next) => {
   const { name, price, imageUrl, description } = req.body;
 
-  // Validate fields
   if (!name || !price || !imageUrl || !description) {
-    return res.status(400).json({ message: 'All fields are required' });
+    return next(new AppError('All fields are required', 400));
   }
 
   if (!validatePrice(price)) {
-    return res.status(400).json({ message: 'Price must be a valid positive number' });
+    return next(new AppError('Price must be a valid positive number', 400));
   }
 
   try {
-    const newProduct = new Product({
+    const product = new Product({
       name,
       price: parseFloat(price),
       imageUrl,
@@ -68,74 +85,94 @@ router.post('/', auth, async (req, res) => {
       owner: req.user.id
     });
 
-    const product = await newProduct.save();
-    const populatedProduct = await Product.findById(product._id).populate('owner', 'name email');
-    res.status(201).json(populatedProduct);
+    await product.save();
+    await product.populate('owner', 'name email');
+    res.status(201).json(product);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error creating product');
+    next(err);
   }
 });
 
 // @route   PUT api/products/:id
 // @desc    Update a product
 // @access  Private
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', auth, async (req, res, next) => {
   const { name, price, imageUrl, description } = req.body;
 
-  // Validate fields
   if (!name || !price || !imageUrl || !description) {
-    return res.status(400).json({ message: 'All fields are required' });
+    return next(new AppError('All fields are required', 400));
   }
 
   if (!validatePrice(price)) {
-    return res.status(400).json({ message: 'Price must be a valid positive number' });
+    return next(new AppError('Price must be a valid positive number', 400));
   }
 
   try {
-    let product = await Product.findById(req.id || req.params.id);
+    let product = await Product.findById(req.params.id);
     if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
+      return next(new AppError('Product not found', 404));
     }
 
-    // Update fields
+    // Authorization verification
+    if (product.owner.toString() !== req.user.id) {
+      return next(new AppError('Not authorized to edit this product', 403));
+    }
+
     product.name = name;
     product.price = parseFloat(price);
     product.imageUrl = imageUrl;
     product.description = description;
 
     await product.save();
-    const populatedProduct = await Product.findById(product._id).populate('owner', 'name email');
-    res.json(populatedProduct);
+    await product.populate('owner', 'name email');
+    res.json(product);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error updating product');
+    next(err);
+  }
+});
+
+// @route   DELETE api/products/:id
+// @desc    Delete a product
+// @access  Private
+router.delete('/:id', auth, async (req, res, next) => {
+  try {
+    // Atomic operation checks ownership and deletes to prevent race condition
+    const product = await Product.findOneAndDelete({
+      _id: req.params.id,
+      owner: req.user.id
+    });
+
+    if (!product) {
+      return next(new AppError('Product not found or not authorized to delete', 404));
+    }
+
+    res.json({ message: 'Product deleted successfully' });
+  } catch (err) {
+    next(err);
   }
 });
 
 // @route   POST api/products/:id/like
 // @desc    Like or unlike a product
 // @access  Private
-router.post('/:id/like', auth, async (req, res) => {
+router.post('/:id/like', auth, async (req, res, next) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
+      return next(new AppError('Product not found', 404));
     }
 
     const user = await User.findById(req.user.id);
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return next(new AppError('User not found', 404));
     }
 
     const index = user.likedProducts.indexOf(product._id);
     let isLiked = false;
     if (index >= 0) {
-      // Already liked, so unlike
       user.likedProducts.splice(index, 1);
       isLiked = false;
     } else {
-      // Not liked yet, so like
       user.likedProducts.push(product._id);
       isLiked = true;
     }
@@ -143,8 +180,7 @@ router.post('/:id/like', auth, async (req, res) => {
     await user.save();
     res.json({ isLiked, likedProducts: user.likedProducts });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error toggling product like');
+    next(err);
   }
 });
 

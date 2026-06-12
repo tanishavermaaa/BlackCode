@@ -1,48 +1,40 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import apiClient from '../utils/apiClient';
 import { AuthContext } from '../context/AuthContext';
 import { KeyRound, Mail, AlertCircle } from 'lucide-react';
 
+const loginSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Invalid email address'),
+  password: z.string().min(1, 'Password is required')
+});
+
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const { login, user } = useContext(AuthContext);
   const navigate = useNavigate();
 
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
+    resolver: zodResolver(loginSchema)
+  });
+
   useEffect(() => {
-    // Redirect if already logged in
     if (user) {
       navigate('/');
     }
   }, [user, navigate]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const onSubmit = async (data) => {
     setError('');
-
-    // Client-side validations
-    if (!email || !password) {
-      setError('Please fill in all fields');
-      return;
-    }
-
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      setError('Please enter a valid email address');
-      return;
-    }
-
-    setLoading(true);
     try {
-      const res = await axios.post('/api/auth/login', { email, password });
+      const res = await apiClient.post('/api/auth/login', data);
       login(res.data.token, res.data.user);
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid email or password');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -61,7 +53,7 @@ const Login = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)}>
           <div className="form-group">
             <label className="form-label" htmlFor="email-input">Email Address</label>
             <div style={{ position: 'relative' }}>
@@ -79,12 +71,16 @@ const Login = () => {
                 type="email"
                 id="email-input"
                 className="form-control"
-                style={{ paddingLeft: '48px' }}
+                style={{ paddingLeft: '48px', ...(errors.email && { borderColor: 'hsl(var(--danger))' }) }}
                 placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                {...register('email')}
               />
             </div>
+            {errors.email && (
+              <p style={{ color: 'hsl(var(--danger))', fontSize: '0.8rem', marginTop: '6px' }}>
+                {errors.email.message}
+              </p>
+            )}
           </div>
 
           <div className="form-group">
@@ -104,20 +100,24 @@ const Login = () => {
                 type="password"
                 id="password-input"
                 className="form-control"
-                style={{ paddingLeft: '48px' }}
+                style={{ paddingLeft: '48px', ...(errors.password && { borderColor: 'hsl(var(--danger))' }) }}
                 placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                {...register('password')}
               />
             </div>
+            {errors.password && (
+              <p style={{ color: 'hsl(var(--danger))', fontSize: '0.8rem', marginTop: '6px' }}>
+                {errors.password.message}
+              </p>
+            )}
           </div>
 
           <button 
             type="submit" 
             className="btn btn-primary btn-block mt-4"
-            disabled={loading}
+            disabled={isSubmitting}
           >
-            {loading ? 'Logging in...' : 'Sign In'}
+            {isSubmitting ? 'Logging in...' : 'Sign In'}
           </button>
         </form>
 

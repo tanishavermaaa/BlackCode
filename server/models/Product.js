@@ -29,4 +29,6 @@ const ProductSchema = new mongoose.Schema({
   timestamps: true
 });
 
+ProductSchema.index({ owner: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Product', ProductSchema);

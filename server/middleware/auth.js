@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
 
+const config = require('../src/config/config');
+
 module.exports = function(req, res, next) {
   // Get token from header
   const authHeader = req.header('Authorization');
@@ -17,7 +19,7 @@ module.exports = function(req, res, next) {
   const token = parts[1];
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecretkey_blackcube_2026');
+    const decoded = jwt.verify(token, config.jwtSecret);
     req.user = decoded; // Should contain { id: userId }
     next();
   } catch (err) {

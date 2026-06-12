@@ -1,21 +1,36 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import apiClient from '../utils/apiClient';
 import { AuthContext } from '../context/AuthContext';
 import { User, Mail, Phone, KeyRound, AlertCircle } from 'lucide-react';
 
+const signupSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().min(1, 'Email is required').email('Invalid email address'),
+  mobileNumber: z.string().min(1, 'Mobile number is required').regex(/^\d{10}$/, 'Mobile number must be exactly 10 digits'),
+  password: z.string()
+    .min(12, 'Password must be at least 12 characters')
+    .regex(/[A-Z]/, 'Password must contain an uppercase letter')
+    .regex(/[a-z]/, 'Password must contain a lowercase letter')
+    .regex(/\d/, 'Password must contain a number')
+    .regex(/[@$!%*?&]/, 'Password must contain a special character (@$!%*?&)'),
+  confirmPassword: z.string().min(1, 'Please confirm your password')
+}).refine(data => data.password === data.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword']
+});
+
 const Signup = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    mobileNumber: '',
-    password: '',
-    confirmPassword: ''
-  });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const { login, user } = useContext(AuthContext);
   const navigate = useNavigate();
+
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
+    resolver: zodResolver(signupSchema)
+  });
 
   useEffect(() => {
     if (user) {
@@ -23,49 +38,14 @@ const Signup = () => {
     }
   }, [user, navigate]);
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const onSubmit = async (data) => {
     setError('');
-
-    const { name, email, mobileNumber, password, confirmPassword } = formData;
-
-    // Front-end validations
-    if (!name || !email || !mobileNumber || !password || !confirmPassword) {
-      setError('All fields are required');
-      return;
-    }
-
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      setError('Please enter a valid email address');
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    setLoading(true);
     try {
-      const res = await axios.post('/api/auth/signup', formData);
+      const res = await apiClient.post('/api/auth/signup', data);
       login(res.data.token, res.data.user);
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Error occurred during registration');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -84,7 +64,7 @@ const Signup = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)}>
           <div className="form-group">
             <label className="form-label" htmlFor="name-input">Full Name</label>
             <div style={{ position: 'relative' }}>
@@ -101,14 +81,17 @@ const Signup = () => {
               <input
                 type="text"
                 id="name-input"
-                name="name"
                 className="form-control"
-                style={{ paddingLeft: '48px' }}
+                style={{ paddingLeft: '48px', ...(errors.name && { borderColor: 'hsl(var(--danger))' }) }}
                 placeholder="John Doe"
-                value={formData.name}
-                onChange={handleChange}
+                {...register('name')}
               />
             </div>
+            {errors.name && (
+              <p style={{ color: 'hsl(var(--danger))', fontSize: '0.8rem', marginTop: '6px' }}>
+                {errors.name.message}
+              </p>
+            )}
           </div>
 
           <div className="form-group">
@@ -127,14 +110,17 @@ const Signup = () => {
               <input
                 type="email"
                 id="email-input"
-                name="email"
                 className="form-control"
-                style={{ paddingLeft: '48px' }}
+                style={{ paddingLeft: '48px', ...(errors.email && { borderColor: 'hsl(var(--danger))' }) }}
                 placeholder="john@example.com"
-                value={formData.email}
-                onChange={handleChange}
+                {...register('email')}
               />
             </div>
+            {errors.email && (
+              <p style={{ color: 'hsl(var(--danger))', fontSize: '0.8rem', marginTop: '6px' }}>
+                {errors.email.message}
+              </p>
+            )}
           </div>
 
           <div className="form-group">
@@ -153,14 +139,17 @@ const Signup = () => {
               <input
                 type="tel"
                 id="phone-input"
-                name="mobileNumber"
                 className="form-control"
-                style={{ paddingLeft: '48px' }}
+                style={{ paddingLeft: '48px', ...(errors.mobileNumber && { borderColor: 'hsl(var(--danger))' }) }}
                 placeholder="9876543210"
-                value={formData.mobileNumber}
-                onChange={handleChange}
+                {...register('mobileNumber')}
               />
             </div>
+            {errors.mobileNumber && (
+              <p style={{ color: 'hsl(var(--danger))', fontSize: '0.8rem', marginTop: '6px' }}>
+                {errors.mobileNumber.message}
+              </p>
+            )}
           </div>
 
           <div className="form-group">
@@ -179,14 +168,17 @@ const Signup = () => {
               <input
                 type="password"
                 id="password-input"
-                name="password"
                 className="form-control"
-                style={{ paddingLeft: '48px' }}
-                placeholder="Minimum 6 characters"
-                value={formData.password}
-                onChange={handleChange}
+                style={{ paddingLeft: '48px', ...(errors.password && { borderColor: 'hsl(var(--danger))' }) }}
+                placeholder="Minimum 12 characters with symbol, number, uppercase"
+                {...register('password')}
               />
             </div>
+            {errors.password && (
+              <p style={{ color: 'hsl(var(--danger))', fontSize: '0.8rem', marginTop: '6px' }}>
+                {errors.password.message}
+              </p>
+            )}
           </div>
 
           <div className="form-group">
@@ -205,22 +197,25 @@ const Signup = () => {
               <input
                 type="password"
                 id="confirm-password-input"
-                name="confirmPassword"
                 className="form-control"
-                style={{ paddingLeft: '48px' }}
+                style={{ paddingLeft: '48px', ...(errors.confirmPassword && { borderColor: 'hsl(var(--danger))' }) }}
                 placeholder="Repeat password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
+                {...register('confirmPassword')}
               />
             </div>
+            {errors.confirmPassword && (
+              <p style={{ color: 'hsl(var(--danger))', fontSize: '0.8rem', marginTop: '6px' }}>
+                {errors.confirmPassword.message}
+              </p>
+            )}
           </div>
 
           <button 
             type="submit" 
             className="btn btn-primary btn-block mt-4"
-            disabled={loading}
+            disabled={isSubmitting}
           >
-            {loading ? 'Creating Account...' : 'Sign Up'}
+            {isSubmitting ? 'Creating Account...' : 'Sign Up'}
           </button>
         </form>
 
