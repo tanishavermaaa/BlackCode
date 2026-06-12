@@ -24,8 +24,8 @@ A premium MERN stack application with clean glassmorphism UI, robust JWT Authent
 2. A `.env` file has been pre-configured with your database connection details:
    ```env
    PORT=5000
-   MONGO_URI=mongodb+srv://tanishavermaa4:tanishavermaa4@mycluster.whcppma.mongodb.net/blackcube?appName=MyCluster
-   JWT_SECRET=supersecretkey_blackcube_2026
+   MONGO_URI=your_mongodb_url
+   JWT_SECRET=your_secret_key
    ```
 3. Install dependencies:
    ```bash
