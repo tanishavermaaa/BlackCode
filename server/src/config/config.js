@@ -15,5 +15,7 @@ module.exports = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '15m',
   refreshExpiresIn: process.env.REFRESH_EXPIRES_IN || '7d',
   nodeEnv: process.env.NODE_ENV || 'development',
-  allowedOrigins: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:5173', 'http://127.0.0.1:5173']
+  allowedOrigins: process.env.ALLOWED_ORIGINS 
+    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim().replace(/\/$/, '')) 
+    : ['http://localhost:5173', 'http://127.0.0.1:5173']
 };

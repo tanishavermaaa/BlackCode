@@ -23,7 +23,12 @@ app.use(helmet());
 // 2. CORS configurations with origin whitelisting
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || config.allowedOrigins.indexOf(origin) !== -1) {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    const sanitizedOrigin = origin.trim().replace(/\/$/, '');
+    if (config.allowedOrigins.indexOf(sanitizedOrigin) !== -1) {
       callback(null, true);
     } else {
       callback(null, false);
