@@ -2,7 +2,7 @@
 
 BlackCube is a full-stack product management application featuring a **glassmorphism dark UI**, JWT + HttpOnly cookie authentication, paginated product catalog, and real-time likes. Built as a monorepo with a clean separation between a React/Vite frontend and a Node/Express backend.
 
-[![Deploy to Render](https://wonderful-dragon-c278aa.netlify.app/)
+Deployed LINK : https://wonderful-dragon-c278aa.netlify.app/
 
 ---
 
