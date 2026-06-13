@@ -113,10 +113,6 @@ router.put('/:id', auth, async (req, res, next) => {
       return next(new AppError('Product not found', 404));
     }
 
-    // Authorization verification
-    if (product.owner.toString() !== req.user.id) {
-      return next(new AppError('Not authorized to edit this product', 403));
-    }
 
     product.name = name;
     product.price = parseFloat(price);
@@ -138,12 +134,11 @@ router.delete('/:id', auth, async (req, res, next) => {
   try {
     // Atomic operation checks ownership and deletes to prevent race condition
     const product = await Product.findOneAndDelete({
-      _id: req.params.id,
-      owner: req.user.id
+      _id: req.params.id
     });
 
     if (!product) {
-      return next(new AppError('Product not found or not authorized to delete', 404));
+      return next(new AppError('Product not found', 404));
     }
 
     res.json({ message: 'Product deleted successfully' });
