@@ -17,32 +17,68 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 // Response Interceptor: Catch 401 and attempt transparent token refresh
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
     
-    // If the server returns 401 Unauthorized and it's not a retry already
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Only attempt refresh if it is a 401, not a retry, and not an auth login/signup/refresh route
+    const isAuthRoute = originalRequest.url.includes('/api/auth/login') || 
+                        originalRequest.url.includes('/api/auth/signup') || 
+                        originalRequest.url.includes('/api/auth/refresh');
+                        
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute) {
+      if (isRefreshing) {
+        // Queue the request until refresh is done
+        return new Promise((resolve, reject) => {
+          failedQueue.push({
+            resolve: (token) => {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+              resolve(apiClient(originalRequest));
+            },
+            reject: (err) => {
+              reject(err);
+            }
+          });
+        });
+      }
+
       originalRequest._retry = true;
-      
+      isRefreshing = true;
+
       try {
-        // Request a new access token from /refresh
         const { data } = await axios.post(
           `${apiClient.defaults.baseURL}/api/auth/refresh`,
           {},
           { withCredentials: true }
         );
         
-        // Save new token to localstorage
         localStorage.setItem('token', data.token);
         
-        // Update header and retry original request
+        processQueue(null, data.token);
+        isRefreshing = false;
+
         originalRequest.headers.Authorization = `Bearer ${data.token}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // If refresh fails (e.g., refresh token expired), clear localstorage and redirect
+        processQueue(refreshError, null);
+        isRefreshing = false;
+        
         localStorage.removeItem('token');
         window.location.href = '/login';
         return Promise.reject(refreshError);

@@ -13,7 +13,13 @@ export const AuthProvider = ({ children }) => {
       if (token) {
         try {
           const res = await apiClient.get('/api/auth/profile');
-          setUser(res.data);
+          const userData = res.data;
+          setUser({
+            id: userData._id || userData.id,
+            name: userData.name,
+            email: userData.email,
+            mobileNumber: userData.mobileNumber
+          });
         } catch (err) {
           console.error('Session expired or error loading profile:', err);
           logout();

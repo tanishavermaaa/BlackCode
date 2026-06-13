@@ -138,24 +138,27 @@ const Home = () => {
                         <span>{isLiked ? 'Liked' : 'Like'}</span>
                       </button>
 
-                      {isOwner && (
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button 
-                            className="edit-button"
-                            onClick={() => navigate(`/edit-product/${product._id}`, { state: { product } })}
-                            style={{ color: 'hsl(var(--accent))' }}
-                          >
-                            <Edit size={16} />
-                          </button>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <button 
+                          className="edit-button"
+                          onClick={() => navigate(`/edit-product/${product._id}`, { state: { product } })}
+                          style={{ color: 'hsl(var(--accent))' }}
+                        >
+                          <Edit size={16} />
+                          <span>Edit</span>
+                        </button>
+
+                        {isOwner && (
                           <button 
                             className="edit-button"
                             onClick={() => handleDelete(product._id)}
                             style={{ color: 'hsl(var(--danger))' }}
+                            title="Delete product"
                           >
                             <Trash2 size={16} />
                           </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
