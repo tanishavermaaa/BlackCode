@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000' : ''),
+  // In dev: Vite proxy forwards /api → http://localhost:5000
+  // In production: VITE_API_URL is your Render backend URL
+  baseURL: import.meta.env.VITE_API_URL || '',
   withCredentials: true // Required to send cookies (refreshToken HttpOnly cookie)
 });
 
@@ -63,7 +65,7 @@ apiClient.interceptors.response.use(
 
       try {
         const { data } = await axios.post(
-          `${apiClient.defaults.baseURL}/api/auth/refresh`,
+          `${import.meta.env.VITE_API_URL || ''}/api/auth/refresh`,
           {},
           { withCredentials: true }
         );
