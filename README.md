@@ -1,4 +1,4 @@
-# BlackCube 🕋 — Premium MERN Stack Product Management Platform
+# BlackCube 🕋 - Premium MERN Stack Product Management Platform
 
 BlackCube is a full-stack product management application featuring a **glassmorphism dark UI**, JWT + HttpOnly cookie authentication, paginated product catalog, and real-time likes. Built as a monorepo with a clean separation between a React/Vite frontend and a Node/Express backend.
 
@@ -238,8 +238,4 @@ Once Netlify gives you a URL (e.g., `https://blackcube.netlify.app`):
 - Generate secrets with: `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"`
 - Restrict MongoDB Atlas to specific IPs when you know your Render static IP (requires Render paid plan)
 
----
 
-## 📄 License
-
-MIT © tanishavermaaa
